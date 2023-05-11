@@ -1,10 +1,14 @@
 import requests as req
 from bs4 import BeautifulSoup
-
+import re
+import csv
 # This is a python script that scraps the Salatomatic website for all the Masjids in the USA
 
 # This function scraps the main page of Salatomatic USA and gets the div that contains all the main state page
+# Returns a list of all the masjids in the USA by state
+# Format: [state#0, state#1, ...]
 def getAllMasjidsinUSA():
+    allMasjidInformation = []
     URL = "https://www.salatomatic.com/reg/United-States/sPpaNwWSpq"
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
@@ -17,9 +21,11 @@ def getAllMasjidsinUSA():
             #print("FOUND")
             sortedTableArray.append(table)
     importantTable = sortedTableArray[(len(sortedTableArray))-1]
-    getStateMasjidLinks(importantTable)
+    return getStateMasjidLinks(importantTable)
     
 # This function sorts through the table from the getAllMasjidsinUSA() function and gets the links to each state
+# Returns a list of all the masjids in a state, sorted by metro area
+# Format: [state#0, state#1, ...]
 def getStateMasjidLinks(importantTable):
     # this table contains the links each State Page (which contains the metroplitan areas)
     # Should be stored as [Name of the State, Link to the State]
@@ -28,13 +34,15 @@ def getStateMasjidLinks(importantTable):
         #print(link.get('href'))
         #print(link.string)
         link_url = "https://www.salatomatic.com/reg/" + link.get('href')
-        stateLinks.append([link.string, link_url])
-        getMetropolitanMasjidLinks(link.string, link_url)
-    #print(stateLinks)
-
+        stateLinks.extend(getMetropolitanMasjidLinks(link.string, link_url))
+    print(stateLinks)
+    return stateLinks    
+    
 # This function sorts through each link from the getStateMasjidLinks() function and gets the links to each metropolitan area
+# Returns a list of all the masjids in a metropolitan areas of the state
+# {"StateName": stateName, "MetropolitanAreas": [metropolitanArea#0, metropolitanArea#1, ...]}
 def getMetropolitanMasjidLinks(stateName, stateLink):
-   #print(stateName)
+    #print(stateName)
     URL = stateLink
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
@@ -44,26 +52,59 @@ def getMetropolitanMasjidLinks(stateName, stateLink):
         if(link.get('href').find("/sub/") != -1):
             #print(link.get('href'))
             #print(link.string)
-            metropolitanAreaLinks.append([link.string, "https://www.salatomatic.com" + link.get('href')])
-            getMasjidNamesAndLocations(link.string, "https://www.salatomatic.com" + link.get('href'))
+            metropolitanAreaLinks.extend(getMasjidNamesAndLocations(stateName, link.string, "https://www.salatomatic.com" + link.get('href')))
+    print(metropolitanAreaLinks)
+    return metropolitanAreaLinks 
     #print(metropolitanAreaLinks)
     #print(len(metropolitanAreaLinks))
 
 # This function sorts through each link from the getMetropolitanMasjidLinks() function and gets the name and location of each masjid
-def getMasjidNamesAndLocations(metropolitanAreaName, metropolitanAreaLink):
-    print(metropolitanAreaName)
+# Returns a list of all the masjids in the metropolitan area
+# Return: [masjid_info#0, masjid_info#1, ...]
+def getMasjidNamesAndLocations(stateName, metropolitanAreaName, metropolitanAreaLink):
+    #print(metropolitanAreaName)
     URL = metropolitanAreaLink
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
     # Format [salatomatic link, masjid name, location]
-    masjidLinksNamesAndLocations = []
+    metroInfo = []
     for div in soup.find_all('div', {'id': 'header', 'onclick': lambda value: value and 'location.href' in value}):
         masjidName = div.find('div', class_= 'titleBS').a.string
         masjidLink = "https://www.salatomatic.com" +  div.find('div', class_= 'titleBS').a['href']
         masjidLocation = div.find('div', class_= 'tinyLink').string
-        masjidLinksNamesAndLocations.append([masjidLink, masjidName, masjidLocation])
-    print(masjidLinksNamesAndLocations)
-        #print(div.a['href'])
-    #print(soup.prettify())
+        metroInfo.append(getMasjidPhoneNumber(stateName, metropolitanAreaName, masjidName, masjidLocation, masjidLink))
+    return metroInfo
+    #print(masjidLinksNamesAndLocations)
 
-getAllMasjidsinUSA()
+# This masjid gets the phone number of each masjid. The phone number may be None.
+# Returns: {State Name, Metro Area, Masjid Name, Masjid Location, Phone Number}
+def getMasjidPhoneNumber(stateName, metropolitanAreaName, masjidName, masjidLocation, masjidLink):
+    URL = masjidLink
+    r = req.get(URL)
+    soup = BeautifulSoup(r.content, 'html5lib')
+    # Check text of page to see if phone number exists
+    #print(soup.find_all('div', class_= 'midLink'))
+    phoneNumbers = re.findall(r"\(\d\d\d\)\s\d\d\d-\d\d\d\d", soup.get_text())
+    if(len(phoneNumbers) == 0):
+        phoneNumbers = None
+    else:
+        phoneNumbers = phoneNumbers[0]
+    masjid_data = {"State": stateName, "Metropolitan Area": metropolitanAreaName, "Masjid Name" : masjidName, "Masjid Location" : masjidLocation, "Phone Number" : phoneNumbers}
+    #print(masjid_data)
+    return masjid_data
+
+def save_to_csv(data, filename):
+    csv_file = filename
+    fieldnames = ["State Name", "Metropolitan Area", "Masjid Name", "Masjid Location", "Phone Number"]
+    with open(csv_file, mode="w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        # Write the header row
+        writer.writeheader()
+        # Write the data rows
+        writer.writerows(data)
+    print("CSV file created successfully.")
+
+# TODO:  Format into an excel sheet
+allMasjidInfo = getAllMasjidsinUSA()
+
+save_to_csv(allMasjidInfo, "masjid_data.csv")
