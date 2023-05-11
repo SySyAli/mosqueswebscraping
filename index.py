@@ -40,7 +40,7 @@ def getStateMasjidLinks(importantTable):
     
 # This function sorts through each link from the getStateMasjidLinks() function and gets the links to each metropolitan area
 # Returns a list of all the masjids in a metropolitan areas of the state
-# {"StateName": stateName, "MetropolitanAreas": [metropolitanArea#0, metropolitanArea#1, ...]}
+# [metropolitanArea#0, metropolitanArea#1, ...]
 def getMetropolitanMasjidLinks(stateName, stateLink):
     #print(stateName)
     URL = stateLink
@@ -53,7 +53,7 @@ def getMetropolitanMasjidLinks(stateName, stateLink):
             #print(link.get('href'))
             #print(link.string)
             metropolitanAreaLinks.extend(getMasjidNamesAndLocations(stateName, link.string, "https://www.salatomatic.com" + link.get('href')))
-    print(metropolitanAreaLinks)
+    #print(metropolitanAreaLinks)
     return metropolitanAreaLinks 
     #print(metropolitanAreaLinks)
     #print(len(metropolitanAreaLinks))
