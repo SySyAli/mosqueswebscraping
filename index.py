@@ -1,29 +1,64 @@
 import requests as req
 from bs4 import BeautifulSoup
 
-
-# Scraping first website to generate CSV 
-URL = "https://hirr.hartsem.edu/mosque/database.html"
-
-r = req.get(URL)
-
-soup = BeautifulSoup(r.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
-
-# Format is for each entry is: [stateLink, stateName]
-stateLinks = []
-
-for link in soup.find_all('option')[1:]:
-    
-    stateName = " ".join(link.string.split())
-    stateLinks.append([link.get('value'),stateName])
-    #print(link.get('value'))
-print(stateLinks)
-
-# Go through each link and get the data
-for link in stateLinks:
-    r = req.get(link[0])
+# This is a python script that scraps the Salatomatic website for all the Masjids in the USA
+SALATOMATIC_URL = "https://www.salatomatic.com"
+# This function scraps the main page of Salatomatic USA and gets the div that contains all the main state page
+def getAllMasjidsinUSA():
+    URL = SALATOMATIC_URL + "/reg/United-States/sPpaNwWSpq"
+    r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
-    for table in soup.find_all(bgcolor = "#E2E2E2"):
-        print(table)
-    
+    sortedTableArray = []
     #print(soup.prettify())
+    tableArray = soup.find_all('table')
+    for table in tableArray:
+        if(table.get_text().find("Alabama") != -1 and table.get_text().find("32") != -1):
+            #print(table.prettify())
+            #print("FOUND")
+            sortedTableArray.append(table)
+    importantTable = sortedTableArray[(len(sortedTableArray))-1]
+    getStateMasjidLinks(importantTable)
+    
+# This function sorts through the table from the getAllMasjidsinUSA() function and gets the links to each state
+def getStateMasjidLinks(importantTable):
+    # this table contains the links each State Page (which contains the metroplitan areas)
+    # Should be stored as [Name of the State, Link to the State]
+    stateLinks = []
+    for link in importantTable.find_all('a'):
+        #print(link.get('href'))
+        #print(link.string)
+        link_url = SALATOMATIC_URL + "/reg/" + link.get('href')
+        stateLinks.append([link.string, link_url])
+        getMetropolitanMasjidLinks(link.string, link_url)
+    #print(stateLinks)
+
+# This function sorts through each link from the getStateMasjidLinks() function and gets the links to each metropolitan area
+def getMetropolitanMasjidLinks(stateName, stateLink):
+   #print(stateName)
+    URL = stateLink
+    r = req.get(URL)
+    soup = BeautifulSoup(r.content, 'html5lib')
+    # Format [metro name, link to metro]
+    metropolitanAreaLinks = []
+    for link in soup.find_all('a'):
+        if(link.get('href').find("/sub/") != -1):
+            #print(link.get('href'))
+            #print(link.string)
+            metropolitanAreaLinks.append([link.string, "https://www.salatomatic.com" + link.get('href')])
+            getMasjidNamesAndLocations(link.string, "https://www.salatomatic.com" + link.get('href'))
+    #print(metropolitanAreaLinks)
+    #print(len(metropolitanAreaLinks))
+
+# This function sorts through each link from the getMetropolitanMasjidLinks() function and gets the name and location of each masjid
+def getMasjidNamesAndLocations(metropolitanAreaName, metropolitanAreaLink):
+    print(metropolitanAreaName)
+    URL = metropolitanAreaLink
+    r = req.get(URL)
+    soup = BeautifulSoup(r.content, 'html5lib')
+    # Format [masjid name, location]
+    masjidNamesAndLocations = []
+    for div in soup.find_all('div', {'id': 'header', 'onclick': lambda value: value and 'location.href' in value}):
+        print(div)
+    #print(soup.prettify())
+
+getAllMasjidsinUSA()
