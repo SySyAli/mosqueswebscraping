@@ -2,10 +2,10 @@ import requests as req
 from bs4 import BeautifulSoup
 
 # This is a python script that scraps the Salatomatic website for all the Masjids in the USA
-SALATOMATIC_URL = "https://www.salatomatic.com"
+
 # This function scraps the main page of Salatomatic USA and gets the div that contains all the main state page
 def getAllMasjidsinUSA():
-    URL = SALATOMATIC_URL + "/reg/United-States/sPpaNwWSpq"
+    URL = "https://www.salatomatic.com/reg/United-States/sPpaNwWSpq"
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
     sortedTableArray = []
@@ -27,7 +27,7 @@ def getStateMasjidLinks(importantTable):
     for link in importantTable.find_all('a'):
         #print(link.get('href'))
         #print(link.string)
-        link_url = SALATOMATIC_URL + "/reg/" + link.get('href')
+        link_url = "https://www.salatomatic.com/reg/" + link.get('href')
         stateLinks.append([link.string, link_url])
         getMetropolitanMasjidLinks(link.string, link_url)
     #print(stateLinks)
@@ -55,10 +55,15 @@ def getMasjidNamesAndLocations(metropolitanAreaName, metropolitanAreaLink):
     URL = metropolitanAreaLink
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
-    # Format [masjid name, location]
-    masjidNamesAndLocations = []
+    # Format [salatomatic link, masjid name, location]
+    masjidLinksNamesAndLocations = []
     for div in soup.find_all('div', {'id': 'header', 'onclick': lambda value: value and 'location.href' in value}):
-        print(div)
+        masjidName = div.find('div', class_= 'titleBS').a.string
+        masjidLink = "https://www.salatomatic.com" +  div.find('div', class_= 'titleBS').a['href']
+        masjidLocation = div.find('div', class_= 'tinyLink').string
+        masjidLinksNamesAndLocations.append([masjidLink, masjidName, masjidLocation])
+    print(masjidLinksNamesAndLocations)
+        #print(div.a['href'])
     #print(soup.prettify())
 
 getAllMasjidsinUSA()
