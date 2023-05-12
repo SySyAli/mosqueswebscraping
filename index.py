@@ -18,7 +18,7 @@ def getAllMasjidsinUSA():
     for table in tableArray:
         if(table.get_text().find("Alabama") != -1 and table.get_text().find("32") != -1):
             #print(table.prettify())
-            #print("FOUND")
+            print("FOUND")
             sortedTableArray.append(table)
     importantTable = sortedTableArray[(len(sortedTableArray))-1]
     return getStateMasjidLinks(importantTable)
@@ -42,7 +42,7 @@ def getStateMasjidLinks(importantTable):
 # Returns a list of all the masjids in a metropolitan areas of the state
 # [metropolitanArea#0, metropolitanArea#1, ...]
 def getMetropolitanMasjidLinks(stateName, stateLink):
-    #print(stateName)
+    print(stateName)
     URL = stateLink
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
@@ -53,7 +53,7 @@ def getMetropolitanMasjidLinks(stateName, stateLink):
             #print(link.get('href'))
             #print(link.string)
             metropolitanAreaLinks.extend(getMasjidNamesAndLocations(stateName, link.string, "https://www.salatomatic.com" + link.get('href')))
-    #print(metropolitanAreaLinks)
+    print(metropolitanAreaLinks)
     return metropolitanAreaLinks 
     #print(metropolitanAreaLinks)
     #print(len(metropolitanAreaLinks))
@@ -62,7 +62,7 @@ def getMetropolitanMasjidLinks(stateName, stateLink):
 # Returns a list of all the masjids in the metropolitan area
 # Return: [masjid_info#0, masjid_info#1, ...]
 def getMasjidNamesAndLocations(stateName, metropolitanAreaName, metropolitanAreaLink):
-    #print(metropolitanAreaName)
+    print(metropolitanAreaName)
     URL = metropolitanAreaLink
     r = req.get(URL)
     soup = BeautifulSoup(r.content, 'html5lib')
@@ -90,13 +90,13 @@ def getMasjidPhoneNumber(stateName, metropolitanAreaName, masjidName, masjidLoca
     else:
         phoneNumbers = phoneNumbers[0]
     masjid_data = {"State": stateName, "Metropolitan Area": metropolitanAreaName, "Masjid Name" : masjidName, "Masjid Location" : masjidLocation, "Phone Number" : phoneNumbers}
-    #print(masjid_data)
+    print(masjid_data)
     return masjid_data
 
 def save_to_csv(data, filename):
     csv_file = filename
-    fieldnames = ["State Name", "Metropolitan Area", "Masjid Name", "Masjid Location", "Phone Number"]
-    with open(csv_file, mode="w", newline="") as file:
+    fieldnames = ["State", "Metropolitan Area", "Masjid Name", "Masjid Location", "Phone Number"]
+    with open(csv_file, mode="w",encoding='utf-8', errors='ignore', newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         # Write the header row
         writer.writeheader()
